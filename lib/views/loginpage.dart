@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google/constants.dart';
+import 'package:google/cubits/chat_cubit/chat_cubit.dart';
 import 'package:google/cubits/login_cubit/login_cubit.dart';
 import 'package:google/helper/showsnakbar.dart';
 import 'package:google/views/chat_page.dart';
@@ -16,7 +17,7 @@ class loginpage extends StatelessWidget {
   bool Islooding = false;
   GlobalKey<FormState> formkey = GlobalKey();
 
-  loginpage({super.key});
+  loginpage({super.key});  
 
   @override
   Widget build(BuildContext context) {
@@ -25,6 +26,7 @@ class loginpage extends StatelessWidget {
         if (state is loginpage) {
           Islooding = true;
         } else if (state is LoginSuccess) {
+          BlocProvider.of<ChatCubit>(context).getChat();
           Navigator.pushNamed(context, ChatPage.id, arguments: email);
         } else if (state is LoginFailure) {
           showsnakbar(context, state.errorMessage);
@@ -36,7 +38,6 @@ class loginpage extends StatelessWidget {
         progressIndicator: CircularProgressIndicator(color: Colors.white),
         child: Scaffold(
           resizeToAvoidBottomInset: true,
-
           backgroundColor: kPrimaryColor,
           body: Form(
             key: formkey,
@@ -118,7 +119,6 @@ class loginpage extends StatelessWidget {
                     ),
                   ],
                 ),
-
                 Spacer(flex: 9),
               ],
             ),
