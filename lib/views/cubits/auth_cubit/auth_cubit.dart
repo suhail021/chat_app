@@ -7,7 +7,6 @@ part 'auth_state.dart';
 class AuthCubit extends Cubit<AuthState> {
   AuthCubit() : super(AuthInitial());
 
-  
   Future<void> registerUser({
     required String email,
     required String password,
@@ -24,12 +23,13 @@ class AuthCubit extends Cubit<AuthState> {
         emit(RegisterFailure(errorMessage: "email-already-in-use"));
       }
     } catch (e) {
-      emit(RegisterFailure(errorMessage: "there was an error please try again"));
+      emit(
+        RegisterFailure(errorMessage: "there was an error please try again"),
+      );
     }
   }
 
-
-    Future<void> loginuser({
+  Future<void> loginuser({
     required String email,
     required String password,
   }) async {
@@ -46,5 +46,12 @@ class AuthCubit extends Cubit<AuthState> {
       }
     } catch (e) {
       emit(LoginFailure(errorMessage: 'there was an error please try again'));
-    }}
+    }
+  }
+
+  // @override
+  // void onChange(Change<AuthState> change) {
+  //   print(change);
+  //   super.onChange(change);
+  // }
 }

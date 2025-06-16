@@ -28,22 +28,34 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
             LoginFailure(errorMessage: 'there was an error please try again'),
           );
         }
-      }else if(event is RegisterEvent){
-emit(RegisterLoading());
-    try {
-      UserCredential user = await FirebaseAuth.instance
-          .createUserWithEmailAndPassword(email: event.email, password: event.password);
-      emit(RegisterSuccess());
-    } on FirebaseAuthException catch (e) {
-      if (e.code == 'weak-password') {
-        emit(RegisterFailure(errorMessage: "weak-password"));
-      } else if (e.code == 'email-already-in-use') {
-        emit(RegisterFailure(errorMessage: "email-already-in-use"));
-      }
-    } catch (e) {
-      emit(RegisterFailure(errorMessage: "there was an error please try again"));
-    }
+      } else if (event is RegisterEvent) {
+        emit(RegisterLoading());
+        try {
+          UserCredential user = await FirebaseAuth.instance
+              .createUserWithEmailAndPassword(
+                email: event.email,
+                password: event.password,
+              );
+          emit(RegisterSuccess());
+        } on FirebaseAuthException catch (e) {
+          if (e.code == 'weak-password') {
+            emit(RegisterFailure(errorMessage: "weak-password"));
+          } else if (e.code == 'email-already-in-use') {
+            emit(RegisterFailure(errorMessage: "email-already-in-use"));
+          }
+        } catch (e) {
+          emit(
+            RegisterFailure(
+              errorMessage: "there was an error please try again",
+            ),
+          );
+        }
       }
     });
   }
+  // @override
+  // void onTransition(Transition<AuthEvent, AuthState> transition) {
+  //   super.onTransition(transition);
+  //   print(transition);
+  // }
 }
