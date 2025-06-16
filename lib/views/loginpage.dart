@@ -2,8 +2,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google/constants.dart';
-import 'package:google/cubits/chat_cubit/chat_cubit.dart';
-import 'package:google/cubits/login_cubit/login_cubit.dart';
+import 'package:google/views/cubits/auth_cubit/auth_cubit.dart';
+import 'package:google/views/cubits/chat_cubit/chat_cubit.dart';
 import 'package:google/helper/showsnakbar.dart';
 import 'package:google/views/chat_page.dart';
 import 'package:google/views/register_page.dart';
@@ -21,7 +21,7 @@ class loginpage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocListener<LoginCubit, LoginState>(
+    return BlocListener<AuthCubit, AuthState>(
       listener: (context, state) {
         if (state is loginpage) {
           Islooding = true;
@@ -91,7 +91,7 @@ class loginpage extends StatelessWidget {
                   color: Colors.white,
                   onTap: () async {
                     if (formkey.currentState!.validate()) {
-                      BlocProvider.of<LoginCubit>(
+                      BlocProvider.of<AuthCubit>(
                         context,
                       ).loginuser(email: email!, password: password!);
                     } else {}

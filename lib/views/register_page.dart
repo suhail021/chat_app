@@ -2,7 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google/constants.dart';
-import 'package:google/cubits/Register_cubit/register_cubit.dart';
+import 'package:google/views/cubits/auth_cubit/auth_cubit.dart';
 import 'package:google/helper/showsnakbar.dart';
 import 'package:google/views/chat_page.dart';
 import 'package:google/views/loginpage.dart';
@@ -23,13 +23,13 @@ class RegisterPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocConsumer<RegisterCubit, RegisterState>(
+    return BlocConsumer<AuthCubit, AuthState>(
       listener: (context, state) {
         if (state is RegisterLoading) {
           Islooding = true;
         } else if (state is RegisterSuccess) {
           showsnakbar(context, "create the account successfull");
-          Navigator.pushNamed(context, ChatPage.id,arguments:email);
+          Navigator.pushNamed(context, ChatPage.id, arguments: email);
           Islooding = false;
         } else if (state is RegisterFailure) {
           showsnakbar(context, state.errorMessage);
@@ -95,7 +95,7 @@ class RegisterPage extends StatelessWidget {
                       color: Colors.white,
                       onTap: () {
                         if (formkey.currentState!.validate()) {
-                          BlocProvider.of<RegisterCubit>(
+                          BlocProvider.of<AuthCubit>(
                             context,
                           ).registerUser(email: email!, password: password!);
                         } else {}
