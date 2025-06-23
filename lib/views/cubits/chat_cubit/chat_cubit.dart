@@ -14,7 +14,7 @@ class ChatCubit extends Cubit<ChatState> {
   List<MessageModel> messageslist = [];
 
   void sendMessage({required String message, required String email}) {
-    try {
+    try { 
       messages.add({
         kMessage: message,
         kCreatedAt: DateTime.now(),

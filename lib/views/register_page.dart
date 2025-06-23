@@ -30,11 +30,11 @@ class RegisterPage extends StatelessWidget {
         } else if (state is RegisterSuccess) {
           showsnakbar(context, "create the account successfull");
           Navigator.pushNamed(context, ChatPage.id, arguments: email);
-          Islooding = false;
         } else if (state is RegisterFailure) {
           showsnakbar(context, state.errorMessage);
           Islooding = false;
         }
+          Islooding = false;
       },
       builder:
           (context, state) => ModalProgressHUD(
