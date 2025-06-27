@@ -17,7 +17,7 @@ class SheinWebView extends StatefulWidget {
 
 class _SheinWebViewState extends State<SheinWebView> {
   late InAppWebViewController webViewController;
-  bool isProductPage = false; // لتحديد إن كانت الصفحة صفحة منتج
+  bool isProductPage = false;
 
   @override
   Widget build(BuildContext context) {
@@ -32,44 +32,91 @@ class _SheinWebViewState extends State<SheinWebView> {
               webViewController.reload();
             },
           ),
+          IconButton(
+            icon: Icon(Icons.arrow_back),
+            onPressed: () {
+              webViewController.goBack();
+            },
+          ),
+          IconButton(
+            icon: Icon(Icons.arrow_forward),
+            onPressed: () {
+              webViewController.goForward();
+            },
+          ),
         ],
       ),
       body: Stack(
         children: [
           InAppWebView(
-            initialUrlRequest: URLRequest(url: WebUri("https://m.shein.com/ar/")),
+            initialUrlRequest: URLRequest(
+              url: WebUri("https://m.shein.com/ar/"),
+            ),
             onWebViewCreated: (controller) {
               webViewController = controller;
             },
             onLoadStop: (controller, url) async {
-              // تحقق إن كانت الصفحة صفحة منتج
+              // التحقق إذا كانت صفحة منتج
               final hasDetail = await controller.evaluateJavascript(
                 source: """
                   document.getElementById('detail-view') != null;
                 """,
               );
 
+              await controller.evaluateJavascript(
+                source: """
+            var footer = document.querySelector('.index-footer.j-index-footer');
+            if (footer) {
+              footer.style.display = 'none';
+            }
+          """,
+              );
+
+              // إخفاء العناصر غير المرغوب بها
+              await controller.evaluateJavascript(
+                source: """
+                const hideByClass = (className) => {
+                  const el = document.querySelector('.' + className);
+                  if (el) el.style.display = 'none';
+                };
+
+                hideByClass('bsc-common-header__left');
+                hideByClass('bsc-common-header__right');
+                hideByClass('index-footer');
+                hideByClass('j-index-footer');
+                hideByClass('quick-cart-tip');
+                hideByClass('quick-cart-tip_');
+              """,
+              );
+
               setState(() {
-                isProductPage = hasDetail == true || hasDetail.toString().contains("true");
+                isProductPage =
+                    hasDetail == true || hasDetail.toString().contains("true");
               });
             },
           ),
+
+          // زر "إضافة إلى السلة"
           if (isProductPage)
             Positioned(
               bottom: 20,
               right: 20,
               child: FloatingActionButton.extended(
                 onPressed: () async {
+                  // جلب بيانات المنتج
                   final name = await webViewController.evaluateJavascript(
-                    source: "document.getElementById('detail-view')?.getAttribute('data-goods_name');",
+                    source:
+                        "document.getElementById('detail-view')?.getAttribute('data-goods_name');",
                   );
 
                   final price = await webViewController.evaluateJavascript(
-                    source: "document.getElementById('detail-view')?.getAttribute('data-goods_ga_price');",
+                    source:
+                        "document.getElementById('detail-view')?.getAttribute('data-goods_ga_price');",
                   );
 
                   final productId = await webViewController.evaluateJavascript(
-                    source: "document.getElementById('detail-view')?.getAttribute('data-goods_id');",
+                    source:
+                        "document.getElementById('detail-view')?.getAttribute('data-goods_id');",
                   );
 
                   if (context.mounted) {
@@ -81,8 +128,14 @@ class _SheinWebViewState extends State<SheinWebView> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text('المنتج: $name', style: TextStyle(fontSize: 18)),
-                              Text('السعر: \$${price}', style: TextStyle(fontSize: 16)),
+                              Text(
+                                '📦 المنتج: $name',
+                                style: TextStyle(fontSize: 18),
+                              ),
+                              Text(
+                                '💰 السعر: \$${price}',
+                                style: TextStyle(fontSize: 16),
+                              ),
                               Spacer(),
                               ElevatedButton(
                                 onPressed: () {
@@ -94,7 +147,8 @@ class _SheinWebViewState extends State<SheinWebView> {
                                         title: Text('✅ تم إضافة المنتج'),
                                         content: Column(
                                           mainAxisSize: MainAxisSize.min,
-                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
                                           children: [
                                             Text("🆔 المعرف: $productId"),
                                             Text("📦 الاسم: $name"),
@@ -103,7 +157,9 @@ class _SheinWebViewState extends State<SheinWebView> {
                                         ),
                                         actions: [
                                           TextButton(
-                                            onPressed: () => Navigator.of(context).pop(),
+                                            onPressed:
+                                                () =>
+                                                    Navigator.of(context).pop(),
                                             child: Text('تم'),
                                           ),
                                         ],
@@ -129,4 +185,3 @@ class _SheinWebViewState extends State<SheinWebView> {
     );
   }
 }
-  
