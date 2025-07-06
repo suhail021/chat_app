@@ -293,6 +293,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.10.1"
+  spincircle_bottom_bar:
+    dependency: "direct main"
+    description:
+      name: spincircle_bottom_bar
+      sha256: a9a5306013b77f084bb877b8ef37dd4f920cc3e8b7f347e19e846f301f5082fc
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.0.0"
   stack_trace:
     dependency: transitive
     description:
