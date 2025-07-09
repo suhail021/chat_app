@@ -28,21 +28,15 @@ class _SheinWebViewState extends State<SheinWebView> {
         actions: [
           IconButton(
             icon: Icon(Icons.refresh),
-            onPressed: () {
-              webViewController.reload();
-            },
+            onPressed: () => webViewController.reload(),
           ),
           IconButton(
             icon: Icon(Icons.arrow_back),
-            onPressed: () {
-              webViewController.goBack();
-            },
+            onPressed: () => webViewController.goBack(),
           ),
           IconButton(
             icon: Icon(Icons.arrow_forward),
-            onPressed: () {
-              webViewController.goForward();
-            },
+            onPressed: () => webViewController.goForward(),
           ),
         ],
       ),
@@ -56,121 +50,156 @@ class _SheinWebViewState extends State<SheinWebView> {
               webViewController = controller;
             },
             onLoadStop: (controller, url) async {
-              // التحقق إذا كانت صفحة منتج
+              await Future.delayed(Duration(milliseconds: 500));
+
               final hasDetail = await controller.evaluateJavascript(
-                source: """
-                  document.getElementById('detail-view') != null;
-                """,
+                source: "document.getElementById('detail-view') != null;",
               );
 
-              await controller.evaluateJavascript(
-                source: """
-            var footer = document.querySelector('.index-footer.j-index-footer');
-            if (footer) {
-              footer.style.display = 'none';
-            }
-          """,
-              );
-
-              // إخفاء العناصر غير المرغوب بها
-              await controller.evaluateJavascript(
-                source: """
+              await controller.evaluateJavascript(source: """
                 const hideByClass = (className) => {
                   const el = document.querySelector('.' + className);
                   if (el) el.style.display = 'none';
                 };
-
                 hideByClass('bsc-common-header__left');
                 hideByClass('bsc-common-header__right');
                 hideByClass('index-footer');
                 hideByClass('j-index-footer');
                 hideByClass('quick-cart-tip');
                 hideByClass('quick-cart-tip_');
-              """,
-              );
+              """);
 
               setState(() {
-                isProductPage =
-                    hasDetail == true || hasDetail.toString().contains("true");
+                isProductPage = hasDetail == true || hasDetail.toString().contains("true");
               });
             },
           ),
 
-          // زر "إضافة إلى السلة"
           if (isProductPage)
             Positioned(
               bottom: 20,
               right: 20,
               child: FloatingActionButton.extended(
                 onPressed: () async {
-                  // جلب بيانات المنتج
+                  await Future.delayed(Duration(seconds: 2));
+
                   final name = await webViewController.evaluateJavascript(
-                    source:
-                        "document.getElementById('detail-view')?.getAttribute('data-goods_name');",
+                    source: "document.getElementById('detail-view')?.getAttribute('data-goods_name');",
                   );
-
                   final price = await webViewController.evaluateJavascript(
-                    source:
-                        "document.getElementById('detail-view')?.getAttribute('data-goods_ga_price');",
+                    source: "document.getElementById('detail-view')?.getAttribute('data-goods_ga_price');",
+                  );
+                  final productId = await webViewController.evaluateJavascript(
+                    source: "document.getElementById('detail-view')?.getAttribute('data-goods_id');",
                   );
 
-                  final productId = await webViewController.evaluateJavascript(
-                    source:
-                        "document.getElementById('detail-view')?.getAttribute('data-goods_id');",
+                  final selectedColor = await webViewController.evaluateJavascript(
+                    source: """
+                      (function() {
+                        var el = document.querySelector('li.color-active a');
+                        return el ? el.getAttribute('aria-label') : null;
+                      })();
+                    """,
                   );
+
+                  // التحقق من وجود واختيار المقاس
+                  final hasSizes = await webViewController.evaluateJavascript(
+                    source: "document.querySelectorAll('ul.choose-size li').length > 0;"
+                  );
+                  final selectedSize = await webViewController.evaluateJavascript(
+                    source: """
+                      (function() {
+                        var el = document.querySelector('ul.choose-size li.size-active');
+                        return el ? el.getAttribute('aria-label') : null;
+                      })();
+                    """,
+                  );
+
+                  if (hasSizes == true && (selectedSize == null || selectedSize.toString().isEmpty)) {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text("⚠️ يرجى اختيار المقاس قبل الإضافة إلى السلة")),
+                      );
+                    }
+                    return;
+                  }
+
+                  int quantity = 1;
+                  double total = double.tryParse(price.toString()) ?? 0;
 
                   if (context.mounted) {
                     showModalBottomSheet(
                       context: context,
                       builder: (context) {
-                        return Container(
-                          padding: EdgeInsets.all(20),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                '📦 المنتج: $name',
-                                style: TextStyle(fontSize: 18),
-                              ),
-                              Text(
-                                '💰 السعر: \$${price}',
-                                style: TextStyle(fontSize: 16),
-                              ),
-                              Spacer(),
-                              ElevatedButton(
-                                onPressed: () {
-                                  Navigator.pop(context); // إغلاق BottomSheet
-                                  showDialog(
-                                    context: context,
-                                    builder: (context) {
-                                      return AlertDialog(
-                                        title: Text('✅ تم إضافة المنتج'),
-                                        content: Column(
-                                          mainAxisSize: MainAxisSize.min,
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Text("🆔 المعرف: $productId"),
-                                            Text("📦 الاسم: $name"),
-                                            Text("💰 السعر: \$${price}"),
+                        return StatefulBuilder(
+                          builder: (context, setSheetState) {
+                            return Padding(
+                              padding: EdgeInsets.all(20),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text("📦 الاسم: $name", style: TextStyle(fontSize: 18)),
+                                  Text("💰 السعر: \$${price}", style: TextStyle(fontSize: 16)),
+                                  if (selectedColor != null && selectedColor.toString().trim().isNotEmpty)
+                                    Text("🎨 اللون: $selectedColor", style: TextStyle(fontSize: 16)),
+                                  if (selectedSize != null && selectedSize.toString().trim().isNotEmpty)
+                                    Text("📏 المقاس: $selectedSize", style: TextStyle(fontSize: 16)),
+                                  SizedBox(height: 10),
+                                  Row(
+                                    children: [
+                                      Text("🔢 الكمية:"),
+                                      IconButton(
+                                        onPressed: () {
+                                          if (quantity > 1) setSheetState(() => quantity--);
+                                        },
+                                        icon: Icon(Icons.remove),
+                                      ),
+                                      Text(quantity.toString()),
+                                      IconButton(
+                                        onPressed: () => setSheetState(() => quantity++),
+                                        icon: Icon(Icons.add),
+                                      ),
+                                    ],
+                                  ),
+                                  Text("💵 السعر الكلي: \$${(quantity * total).toStringAsFixed(2)}"),
+                                  Spacer(),
+                                  ElevatedButton(
+                                    onPressed: () {
+                                      Navigator.pop(context);
+                                      showDialog(
+                                        context: context,
+                                        builder: (_) => AlertDialog(
+                                          title: Text("✅ تم الإضافة"),
+                                          content: Column(
+                                            mainAxisSize: MainAxisSize.min,
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Text("🆔 المعرف: $productId"),
+                                              Text("📦 الاسم: $name"),
+                                              Text("💰 السعر: \$${price}"),
+                                              if (selectedColor != null && selectedColor.toString().trim().isNotEmpty)
+                                                Text("🎨 اللون: $selectedColor"),
+                                              if (selectedSize != null && selectedSize.toString().trim().isNotEmpty)
+                                                Text("📏 المقاس: $selectedSize"),
+                                              Text("🔢 الكمية: $quantity"),
+                                              Text("💵 السعر الكلي: \$${(total * quantity).toStringAsFixed(2)}"),
+                                            ],
+                                          ),
+                                          actions: [
+                                            TextButton(
+                                              onPressed: () => Navigator.pop(context),
+                                              child: Text("موافق"),
+                                            ),
                                           ],
                                         ),
-                                        actions: [
-                                          TextButton(
-                                            onPressed:
-                                                () =>
-                                                    Navigator.of(context).pop(),
-                                            child: Text('تم'),
-                                          ),
-                                        ],
                                       );
                                     },
-                                  );
-                                },
-                                child: Text('تأكيد الإضافة'),
+                                    child: Text("تأكيد الإضافة"),
+                                  ),
+                                ],
                               ),
-                            ],
-                          ),
+                            );
+                          },
                         );
                       },
                     );
