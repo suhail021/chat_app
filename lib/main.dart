@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
+import 'package:cached_network_image/cached_network_image.dart'; // استدعاء المكتبة
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await InAppWebViewController.setWebContentsDebuggingEnabled(true);
-
   runApp(const MaterialApp(home: SheinWebView()));
 }
 
@@ -143,91 +143,124 @@ class _SheinWebViewState extends State<SheinWebView> {
                           builder: (context, setSheetState) {
                             return Padding(
                               padding: EdgeInsets.all(20),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  if (imageUrl != null && imageUrl.toString().isNotEmpty)
-                                    ClipRRect(
-                                      borderRadius: BorderRadius.circular(10),
-                                      child: Image.network(
-                                        imageUrl.toString().startsWith("http") ? imageUrl : "https:${imageUrl.toString()}",
-                                        height: 200,
-                                        width: double.infinity,
-                                        fit: BoxFit.cover,
-                                      ),
-                                    ),
-                                  SizedBox(height: 10),
-                                  Text("📦 الاسم: $name", style: TextStyle(fontSize: 18)),
-                                  Text("💰 السعر: \$${price}", style: TextStyle(fontSize: 16)),
-                                  if (selectedColor != null && selectedColor.toString().trim().isNotEmpty)
-                                    Text("🎨 اللون: $selectedColor", style: TextStyle(fontSize: 16)),
-                                  if (selectedSize != null && selectedSize.toString().trim().isNotEmpty)
-                                    Text("📏 المقاس: $selectedSize", style: TextStyle(fontSize: 16)),
-                                  SizedBox(height: 10),
-                                  Row(
-                                    children: [
-                                      Text("🔢 الكمية:"),
-                                      IconButton(
-                                        onPressed: () {
-                                          if (quantity > 1) setSheetState(() => quantity--);
-                                        },
-                                        icon: Icon(Icons.remove),
-                                      ),
-                                      Text(quantity.toString()),
-                                      IconButton(
-                                        onPressed: () => setSheetState(() => quantity++),
-                                        icon: Icon(Icons.add),
-                                      ),
-                                    ],
-                                  ),
-                                  Text("💵 السعر الكلي: \$${(quantity * total).toStringAsFixed(2)}"),
-                                  Spacer(),
-                                  ElevatedButton(
-                                    onPressed: () {
-                                      Navigator.pop(context);
-                                      showDialog(
-                                        context: context,
-                                        builder: (_) => AlertDialog(
-                                          title: Text("✅ تم الإضافة"),
-                                          content: SingleChildScrollView(
-                                            child: Column(
-                                              crossAxisAlignment: CrossAxisAlignment.start,
-                                              children: [
-                                                if (imageUrl != null && imageUrl.toString().isNotEmpty)
-                                                  ClipRRect(
-                                                    borderRadius: BorderRadius.circular(10),
-                                                    child: Image.network(
-                                                      imageUrl.toString().startsWith("http") ? imageUrl : "https:${imageUrl.toString()}",
-                                                      height: 150,
-                                                      width: double.infinity,
-                                                      fit: BoxFit.cover,
-                                                    ),
-                                                  ),
-                                                SizedBox(height: 10),
-                                                Text("🆔 المعرف: $productId"),
-                                                Text("📦 الاسم: $name"),
-                                                Text("💰 السعر: \$${price}"),
-                                                if (selectedColor != null && selectedColor.toString().trim().isNotEmpty)
-                                                  Text("🎨 اللون: $selectedColor"),
-                                                if (selectedSize != null && selectedSize.toString().trim().isNotEmpty)
-                                                  Text("📏 المقاس: $selectedSize"),
-                                                Text("🔢 الكمية: $quantity"),
-                                                Text("💵 السعر الكلي: \$${(total * quantity).toStringAsFixed(2)}"),
-                                              ],
+                              child: SingleChildScrollView(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    if (imageUrl != null && imageUrl.toString().isNotEmpty)
+                                      Padding(
+                                        padding: const EdgeInsets.only(bottom: 10),
+                                        child: SizedBox(
+                                          height: 120,
+                                          width: double.infinity,
+                                          child: ClipRRect(
+                                            borderRadius: BorderRadius.circular(12),
+                                            child: CachedNetworkImage(
+                                              imageUrl: imageUrl.toString().startsWith("http")
+                                                  ? imageUrl
+                                                  : "https:${imageUrl.toString()}",
+                                              fit: BoxFit.cover,
+                                              placeholder: (context, url) => Container(
+                                                color: Colors.grey[200],
+                                                child: Center(child: CircularProgressIndicator()),
+                                              ),
+                                              errorWidget: (context, url, error) => Container(
+                                                color: Colors.grey[300],
+                                                child: Icon(Icons.error, color: Colors.red),
+                                              ),
                                             ),
                                           ),
-                                          actions: [
-                                            TextButton(
-                                              onPressed: () => Navigator.pop(context),
-                                              child: Text("موافق"),
-                                            ),
-                                          ],
                                         ),
-                                      );
-                                    },
-                                    child: Text("تأكيد الإضافة"),
-                                  ),
-                                ],
+                                      ),
+                                    Text("📦 الاسم: $name", style: TextStyle(fontSize: 18)),
+                                    Text("💰 السعر: \$${price}", style: TextStyle(fontSize: 16)),
+                                    if (selectedColor != null && selectedColor.toString().trim().isNotEmpty)
+                                      Text("🎨 اللون: $selectedColor", style: TextStyle(fontSize: 16)),
+                                    if (selectedSize != null && selectedSize.toString().trim().isNotEmpty)
+                                      Text("📏 المقاس: $selectedSize", style: TextStyle(fontSize: 16)),
+                                    SizedBox(height: 10),
+                                    Row(
+                                      children: [
+                                        Text("🔢 الكمية:"),
+                                        IconButton(
+                                          onPressed: () {
+                                            if (quantity > 1) setSheetState(() => quantity--);
+                                          },
+                                          icon: Icon(Icons.remove),
+                                        ),
+                                        Text(quantity.toString()),
+                                        IconButton(
+                                          onPressed: () => setSheetState(() => quantity++),
+                                          icon: Icon(Icons.add),
+                                        ),
+                                      ],
+                                    ),
+                                    Text("💵 السعر الكلي: \$${(quantity * total).toStringAsFixed(2)}"),
+                                    SizedBox(height: 30),
+                                    ElevatedButton(
+                                      onPressed: () {
+                                        Navigator.pop(context);
+                                        showDialog(
+                                          context: context,
+                                          builder: (_) => AlertDialog(
+                                            title: Text("✅ تم الإضافة"),
+                                            content: SingleChildScrollView(
+                                              child: Column(
+                                                crossAxisAlignment: CrossAxisAlignment.start,
+                                                children: [
+                                                  if (imageUrl != null && imageUrl.toString().isNotEmpty)
+                                                    Padding(
+                                                      padding: const EdgeInsets.only(bottom: 10),
+                                                      child: SizedBox(
+                                                        height: 120,
+                                                        width: double.infinity,
+                                                        child: ClipRRect(
+                                                          borderRadius: BorderRadius.circular(10),
+                                                          child: CachedNetworkImage(
+                                                            imageUrl: imageUrl.toString().startsWith("http")
+                                                                ? imageUrl
+                                                                : "https:${imageUrl.toString()}",
+                                                            fit: BoxFit.cover,
+                                                            placeholder: (context, url) => Container(
+                                                              color: Colors.grey[200],
+                                                              child: Center(child: CircularProgressIndicator()),
+                                                            ),
+                                                            errorWidget: (context, url, error) => Container(
+                                                              color: Colors.grey[300],
+                                                              child: Icon(Icons.error, color: Colors.red),
+                                                            ),
+                                                          ),
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  Text("🆔 المعرف: $productId"),
+                                                  Text("📦 الاسم: $name"),
+                                                  Text("💰 السعر: \$${price}"),
+                                                  if (selectedColor != null && selectedColor.toString().trim().isNotEmpty)
+                                                    Text("🎨 اللون: $selectedColor"),
+                                                  if (selectedSize != null && selectedSize.toString().trim().isNotEmpty)
+                                                    Text("📏 المقاس: $selectedSize"),
+                                                  Text("🔢 الكمية: $quantity"),
+                                                  Text("💵 السعر الكلي: \$${(total * quantity).toStringAsFixed(2)}"),
+                                                ],
+                                              ),
+                                            ),
+                                            actions: [
+                                              TextButton(
+                                                onPressed: () {
+                                                  // Navigator.pop(context);
+                                                } ,
+                                                child: Text("موافق"),
+                                              ),
+                                            ],
+                                          ),
+                                        );
+                                      },
+                                      child: Text("تأكيد الإضافة"),
+                                    ),
+                                  ],
+                                ),
                               ),
                             );
                           },
