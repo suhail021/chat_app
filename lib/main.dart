@@ -102,7 +102,6 @@ class _SheinWebViewState extends State<SheinWebView> {
                     """,
                   );
 
-                  // التحقق من وجود واختيار المقاس
                   final hasSizes = await webViewController.evaluateJavascript(
                     source: "document.querySelectorAll('ul.choose-size li').length > 0;"
                   );
@@ -111,6 +110,15 @@ class _SheinWebViewState extends State<SheinWebView> {
                       (function() {
                         var el = document.querySelector('ul.choose-size li.size-active');
                         return el ? el.getAttribute('aria-label') : null;
+                      })();
+                    """,
+                  );
+
+                  final imageUrl = await webViewController.evaluateJavascript(
+                    source: """
+                      (function() {
+                        var img = document.querySelector('.crop-image-container__img');
+                        return img ? (img.getAttribute('data-src') || img.getAttribute('src')) : null;
                       })();
                     """,
                   );
@@ -138,6 +146,17 @@ class _SheinWebViewState extends State<SheinWebView> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
+                                  if (imageUrl != null && imageUrl.toString().isNotEmpty)
+                                    ClipRRect(
+                                      borderRadius: BorderRadius.circular(10),
+                                      child: Image.network(
+                                        imageUrl.toString().startsWith("http") ? imageUrl : "https:${imageUrl.toString()}",
+                                        height: 200,
+                                        width: double.infinity,
+                                        fit: BoxFit.cover,
+                                      ),
+                                    ),
+                                  SizedBox(height: 10),
                                   Text("📦 الاسم: $name", style: TextStyle(fontSize: 18)),
                                   Text("💰 السعر: \$${price}", style: TextStyle(fontSize: 16)),
                                   if (selectedColor != null && selectedColor.toString().trim().isNotEmpty)
@@ -170,20 +189,32 @@ class _SheinWebViewState extends State<SheinWebView> {
                                         context: context,
                                         builder: (_) => AlertDialog(
                                           title: Text("✅ تم الإضافة"),
-                                          content: Column(
-                                            mainAxisSize: MainAxisSize.min,
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            children: [
-                                              Text("🆔 المعرف: $productId"),
-                                              Text("📦 الاسم: $name"),
-                                              Text("💰 السعر: \$${price}"),
-                                              if (selectedColor != null && selectedColor.toString().trim().isNotEmpty)
-                                                Text("🎨 اللون: $selectedColor"),
-                                              if (selectedSize != null && selectedSize.toString().trim().isNotEmpty)
-                                                Text("📏 المقاس: $selectedSize"),
-                                              Text("🔢 الكمية: $quantity"),
-                                              Text("💵 السعر الكلي: \$${(total * quantity).toStringAsFixed(2)}"),
-                                            ],
+                                          content: SingleChildScrollView(
+                                            child: Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                if (imageUrl != null && imageUrl.toString().isNotEmpty)
+                                                  ClipRRect(
+                                                    borderRadius: BorderRadius.circular(10),
+                                                    child: Image.network(
+                                                      imageUrl.toString().startsWith("http") ? imageUrl : "https:${imageUrl.toString()}",
+                                                      height: 150,
+                                                      width: double.infinity,
+                                                      fit: BoxFit.cover,
+                                                    ),
+                                                  ),
+                                                SizedBox(height: 10),
+                                                Text("🆔 المعرف: $productId"),
+                                                Text("📦 الاسم: $name"),
+                                                Text("💰 السعر: \$${price}"),
+                                                if (selectedColor != null && selectedColor.toString().trim().isNotEmpty)
+                                                  Text("🎨 اللون: $selectedColor"),
+                                                if (selectedSize != null && selectedSize.toString().trim().isNotEmpty)
+                                                  Text("📏 المقاس: $selectedSize"),
+                                                Text("🔢 الكمية: $quantity"),
+                                                Text("💵 السعر الكلي: \$${(total * quantity).toStringAsFixed(2)}"),
+                                              ],
+                                            ),
                                           ),
                                           actions: [
                                             TextButton(
