@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
-import 'package:cached_network_image/cached_network_image.dart'; // استدعاء المكتبة
+import 'package:cached_network_image/cached_network_image.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -56,7 +56,8 @@ class _SheinWebViewState extends State<SheinWebView> {
                 source: "document.getElementById('detail-view') != null;",
               );
 
-              await controller.evaluateJavascript(source: """
+              await controller.evaluateJavascript(
+                source: """
                 const hideByClass = (className) => {
                   const el = document.querySelector('.' + className);
                   if (el) el.style.display = 'none';
@@ -67,10 +68,12 @@ class _SheinWebViewState extends State<SheinWebView> {
                 hideByClass('j-index-footer');
                 hideByClass('quick-cart-tip');
                 hideByClass('quick-cart-tip_');
-              """);
+              """,
+              );
 
               setState(() {
-                isProductPage = hasDetail == true || hasDetail.toString().contains("true");
+                isProductPage =
+                    hasDetail == true || hasDetail.toString().contains("true");
               });
             },
           ),
@@ -81,56 +84,97 @@ class _SheinWebViewState extends State<SheinWebView> {
               right: 20,
               child: FloatingActionButton.extended(
                 onPressed: () async {
-                  await Future.delayed(Duration(seconds: 2));
+                  // ✅ تأكد هل المنتج يحتوي على خيارات لون أو مقاس
+                  final hasClickToBuy = await webViewController
+                      .evaluateJavascript(
+                        source: """
+                       document.querySelector('ul.choose-size li.goods-size__click-to-buy') !== null;
+                       """,
+                      );
 
-                  final name = await webViewController.evaluateJavascript(
-                    source: "document.getElementById('detail-view')?.getAttribute('data-goods_name');",
-                  );
-                  final price = await webViewController.evaluateJavascript(
-                    source: "document.getElementById('detail-view')?.getAttribute('data-goods_ga_price');",
-                  );
-                  final productId = await webViewController.evaluateJavascript(
-                    source: "document.getElementById('detail-view')?.getAttribute('data-goods_id');",
-                  );
+                  if (hasClickToBuy == true) {
+                    // 🔁 افتح نافذة الاختيار إذا لم تكن مفتوحة
+                    await webViewController.evaluateJavascript(
+                      source: """
+                           document.querySelector('ul.choose-size li.goods-size__click-to-buy').click();
+                              """,
+                    );
+                    await Future.delayed(Duration(seconds: 2));
+                  }
 
-                  final selectedColor = await webViewController.evaluateJavascript(
+                  // ✅ تحقق من وجود خيار لون ومقاس
+                  final selectedColor = await webViewController
+                      .evaluateJavascript(
+                        source: """
+    (function() {
+      var el = document.querySelector('ul.goods-size__sizes[data-attr_id="27"] li.size-active');
+      return el ? el.getAttribute('data-attr_value') : null;
+    })();
+  """,
+                      );
+
+                  final selectedSize = await webViewController
+                      .evaluateJavascript(
+                        source: """
+    (function() {
+      var el = document.querySelector('ul.goods-size__sizes[data-attr_id="87"] li.size-active');
+      return el ? el.getAttribute('data-attr_value') : null;
+    })();
+  """,
+                      );
+
+                  // ✅ تأكد من اختيار اللون والمقاس (إذا كانوا موجودين)
+                  final colorCount = await webViewController.evaluateJavascript(
                     source: """
-                      (function() {
-                        var el = document.querySelector('li.color-active a');
-                        return el ? el.getAttribute('aria-label') : null;
-                      })();
-                    """,
+    document.querySelectorAll('ul.goods-size__sizes[data-attr_id="27"] li').length;
+  """,
                   );
 
-                  final hasSizes = await webViewController.evaluateJavascript(
-                    source: "document.querySelectorAll('ul.choose-size li').length > 0;"
-                  );
-                  final selectedSize = await webViewController.evaluateJavascript(
+                  final sizeCount = await webViewController.evaluateJavascript(
                     source: """
-                      (function() {
-                        var el = document.querySelector('ul.choose-size li.size-active');
-                        return el ? el.getAttribute('aria-label') : null;
-                      })();
-                    """,
+    document.querySelectorAll('ul.goods-size__sizes[data-attr_id="87"] li').length;
+  """,
                   );
 
-                  final imageUrl = await webViewController.evaluateJavascript(
-                    source: """
-                      (function() {
-                        var img = document.querySelector('.crop-image-container__img');
-                        return img ? (img.getAttribute('data-src') || img.getAttribute('src')) : null;
-                      })();
-                    """,
-                  );
-
-                  if (hasSizes == true && (selectedSize == null || selectedSize.toString().isEmpty)) {
+                  if ((colorCount > 0 &&
+                          (selectedColor == null ||
+                              selectedColor.toString().trim().isEmpty)) ||
+                      (sizeCount > 0 &&
+                          (selectedSize == null ||
+                              selectedSize.toString().trim().isEmpty))) {
                     if (context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text("⚠️ يرجى اختيار المقاس قبل الإضافة إلى السلة")),
+                        SnackBar(
+                          content: Text(
+                            "⚠️ يرجى اختيار اللون والمقاس قبل الإضافة إلى السلة",
+                          ),
+                        ),
                       );
                     }
                     return;
                   }
+
+                  // ✅ الآن نعرض Modal الإضافة إلى السلة
+                  final name = await webViewController.evaluateJavascript(
+                    source:
+                        "document.getElementById('detail-view')?.getAttribute('data-goods_name');",
+                  );
+                  final price = await webViewController.evaluateJavascript(
+                    source:
+                        "document.getElementById('detail-view')?.getAttribute('data-goods_ga_price');",
+                  );
+                  final productId = await webViewController.evaluateJavascript(
+                    source:
+                        "document.getElementById('detail-view')?.getAttribute('data-goods_id');",
+                  );
+                  final imageUrl = await webViewController.evaluateJavascript(
+                    source: """
+                   (function() {
+                     var img = document.querySelector('.crop-image-container__img');
+                     return img ? (img.getAttribute('data-src') || img.getAttribute('src')) : null;
+                           })();
+                             """,
+                  );
 
                   int quantity = 1;
                   double total = double.tryParse(price.toString()) ?? 0;
@@ -148,113 +192,146 @@ class _SheinWebViewState extends State<SheinWebView> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    if (imageUrl != null && imageUrl.toString().isNotEmpty)
+                                    if (imageUrl != null &&
+                                        imageUrl.toString().isNotEmpty)
                                       Padding(
-                                        padding: const EdgeInsets.only(bottom: 10),
+                                        padding: const EdgeInsets.only(
+                                          bottom: 10,
+                                        ),
                                         child: SizedBox(
                                           height: 120,
                                           width: double.infinity,
                                           child: ClipRRect(
-                                            borderRadius: BorderRadius.circular(12),
+                                            borderRadius: BorderRadius.circular(
+                                              12,
+                                            ),
                                             child: CachedNetworkImage(
-                                              imageUrl: imageUrl.toString().startsWith("http")
-                                                  ? imageUrl
-                                                  : "https:${imageUrl.toString()}",
+                                              imageUrl:
+                                                  imageUrl
+                                                          .toString()
+                                                          .startsWith("http")
+                                                      ? imageUrl
+                                                      : "https:${imageUrl.toString()}",
                                               fit: BoxFit.cover,
-                                              placeholder: (context, url) => Container(
-                                                color: Colors.grey[200],
-                                                child: Center(child: CircularProgressIndicator()),
-                                              ),
-                                              errorWidget: (context, url, error) => Container(
-                                                color: Colors.grey[300],
-                                                child: Icon(Icons.error, color: Colors.red),
-                                              ),
+                                              placeholder:
+                                                  (context, url) => Container(
+                                                    color: Colors.grey[200],
+                                                    child: Center(
+                                                      child:
+                                                          CircularProgressIndicator(),
+                                                    ),
+                                                  ),
+                                              errorWidget:
+                                                  (context, url, error) =>
+                                                      Container(
+                                                        color: Colors.grey[300],
+                                                        child: Icon(
+                                                          Icons.error,
+                                                          color: Colors.red,
+                                                        ),
+                                                      ),
                                             ),
                                           ),
                                         ),
                                       ),
-                                    Text("📦 الاسم: $name", style: TextStyle(fontSize: 18)),
-                                    Text("💰 السعر: \$${price}", style: TextStyle(fontSize: 16)),
-                                    if (selectedColor != null && selectedColor.toString().trim().isNotEmpty)
-                                      Text("🎨 اللون: $selectedColor", style: TextStyle(fontSize: 16)),
-                                    if (selectedSize != null && selectedSize.toString().trim().isNotEmpty)
-                                      Text("📏 المقاس: $selectedSize", style: TextStyle(fontSize: 16)),
+                                    Text(
+                                      "📦 الاسم: $name",
+                                      style: TextStyle(fontSize: 18),
+                                    ),
+                                    Text(
+                                      "💰 السعر: \$${price}",
+                                      style: TextStyle(fontSize: 16),
+                                    ),
+                                    if (selectedColor != null &&
+                                        selectedColor
+                                            .toString()
+                                            .trim()
+                                            .isNotEmpty)
+                                      Text(
+                                        "🎨 اللون: $selectedColor",
+                                        style: TextStyle(fontSize: 16),
+                                      ),
+                                    if (selectedSize != null &&
+                                        selectedSize
+                                            .toString()
+                                            .trim()
+                                            .isNotEmpty)
+                                      Text(
+                                        "📏 المقاس: $selectedSize",
+                                        style: TextStyle(fontSize: 16),
+                                      ),
                                     SizedBox(height: 10),
                                     Row(
                                       children: [
                                         Text("🔢 الكمية:"),
                                         IconButton(
                                           onPressed: () {
-                                            if (quantity > 1) setSheetState(() => quantity--);
+                                            if (quantity > 1)
+                                              setSheetState(() => quantity--);
                                           },
                                           icon: Icon(Icons.remove),
                                         ),
                                         Text(quantity.toString()),
                                         IconButton(
-                                          onPressed: () => setSheetState(() => quantity++),
+                                          onPressed:
+                                              () => setSheetState(
+                                                () => quantity++,
+                                              ),
                                           icon: Icon(Icons.add),
                                         ),
                                       ],
                                     ),
-                                    Text("💵 السعر الكلي: \$${(quantity * total).toStringAsFixed(2)}"),
+                                    Text(
+                                      "💵 السعر الكلي: \$${(quantity * total).toStringAsFixed(2)}",
+                                    ),
                                     SizedBox(height: 30),
                                     ElevatedButton(
                                       onPressed: () {
                                         Navigator.pop(context);
                                         showDialog(
                                           context: context,
-                                          builder: (_) => AlertDialog(
-                                            title: Text("✅ تم الإضافة"),
-                                            content: SingleChildScrollView(
-                                              child: Column(
-                                                crossAxisAlignment: CrossAxisAlignment.start,
-                                                children: [
-                                                  if (imageUrl != null && imageUrl.toString().isNotEmpty)
-                                                    Padding(
-                                                      padding: const EdgeInsets.only(bottom: 10),
-                                                      child: SizedBox(
-                                                        height: 120,
-                                                        width: double.infinity,
-                                                        child: ClipRRect(
-                                                          borderRadius: BorderRadius.circular(10),
-                                                          child: CachedNetworkImage(
-                                                            imageUrl: imageUrl.toString().startsWith("http")
-                                                                ? imageUrl
-                                                                : "https:${imageUrl.toString()}",
-                                                            fit: BoxFit.cover,
-                                                            placeholder: (context, url) => Container(
-                                                              color: Colors.grey[200],
-                                                              child: Center(child: CircularProgressIndicator()),
-                                                            ),
-                                                            errorWidget: (context, url, error) => Container(
-                                                              color: Colors.grey[300],
-                                                              child: Icon(Icons.error, color: Colors.red),
-                                                            ),
-                                                          ),
-                                                        ),
-                                                      ),
+                                          builder:
+                                              (_) => AlertDialog(
+                                                title: Text("✅ تم الإضافة"),
+                                                content: Column(
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.start,
+                                                  mainAxisSize:
+                                                      MainAxisSize.min,
+                                                  children: [
+                                                    Text(
+                                                      "🆔 المعرف: $productId",
                                                     ),
-                                                  Text("🆔 المعرف: $productId"),
-                                                  Text("📦 الاسم: $name"),
-                                                  Text("💰 السعر: \$${price}"),
-                                                  if (selectedColor != null && selectedColor.toString().trim().isNotEmpty)
-                                                    Text("🎨 اللون: $selectedColor"),
-                                                  if (selectedSize != null && selectedSize.toString().trim().isNotEmpty)
-                                                    Text("📏 المقاس: $selectedSize"),
-                                                  Text("🔢 الكمية: $quantity"),
-                                                  Text("💵 السعر الكلي: \$${(total * quantity).toStringAsFixed(2)}"),
+                                                    Text("📦 الاسم: $name"),
+                                                    Text(
+                                                      "💰 السعر: \$${price}",
+                                                    ),
+                                                    if (selectedColor != null)
+                                                      Text(
+                                                        "🎨 اللون: $selectedColor",
+                                                      ),
+                                                    if (selectedSize != null)
+                                                      Text(
+                                                        "📏 المقاس: $selectedSize",
+                                                      ),
+                                                    Text(
+                                                      "🔢 الكمية: $quantity",
+                                                    ),
+                                                    Text(
+                                                      "💵 السعر الكلي: \$${(total * quantity).toStringAsFixed(2)}",
+                                                    ),
+                                                  ],
+                                                ),
+                                                actions: [
+                                                  TextButton(
+                                                    onPressed:
+                                                        () => Navigator.pop(
+                                                          context,
+                                                        ),
+                                                    child: Text("موافق"),
+                                                  ),
                                                 ],
                                               ),
-                                            ),
-                                            actions: [
-                                              TextButton(
-                                                onPressed: () {
-                                                  // Navigator.pop(context);
-                                                } ,
-                                                child: Text("موافق"),
-                                              ),
-                                            ],
-                                          ),
                                         );
                                       },
                                       child: Text("تأكيد الإضافة"),
@@ -269,6 +346,7 @@ class _SheinWebViewState extends State<SheinWebView> {
                     );
                   }
                 },
+
                 label: Text('إضافة إلى السلة'),
                 icon: Icon(Icons.shopping_cart),
               ),
@@ -277,4 +355,4 @@ class _SheinWebViewState extends State<SheinWebView> {
       ),
     );
   }
-} 
+}
